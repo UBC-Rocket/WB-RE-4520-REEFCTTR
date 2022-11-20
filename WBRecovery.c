@@ -5,8 +5,10 @@ int sabrina(int num);
 int main() {
     printf("Hello world!");
 
-     int x=sabrina(32);
-    printf("%d\n", x);
+     int x=sabrina(31);
+    printf("\n%d\n", x);
+
+    printf("i have added a feature");
     
     return 0;
 }
