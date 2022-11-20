@@ -5,6 +5,7 @@ int sabrina(int num);
 int main() {
     printf("Hello world!");
 
+
      int x=sabrina(31);
     printf("\n%d\n", x);
 
@@ -23,4 +24,5 @@ int sabrina(int num){
         }
     }
 }
+
 
