@@ -8,21 +8,50 @@ unsigned const int BARO_SCLK;
 unsigned const int ALTI_OUT_X;
 unsigned const int ALTI_OUT_Y;
 unsigned const int ALTI_OUT_Z;
-unsigned const int REEF_FIRE;
+unsigned const int REEF_FIRE_1;
+unsigned const int REEF_FIRE_2;
 
 //Check values to prevent reefing misfire
-double CHECK_ALTITUDE = 700;
-double CHECK_SPEED = 200;
-double CHECK_ACCEL = 50;
+double CHECK_ALTITUDE_1 = 700; //[m]
+double CHECK_SPEED_1 = 200;
+double CHECK_ACCEL_1 = 50;
 
-double REEF_ALTITUDE = 100;
-double REEF_SPEED = 15;
+double CHECK_ALTITUDE_2 = 700;
+double CHECK_SPEED_2 = 200;
+double CHECK_ACCEL_2 = 50;
+
+double REEF_ALTITUDE_1 = 150;
+double REEF_SPEED_1 = 15;
+
+double REEF_ALTITUDE_2 = 150;
+double REEF_SPEED_2 = 15;
 
 double prevAltitude = 0;
 double prevTime = 0;
 
+double dataLogStartAltitude = 2000;
+long dataStartTime = 0;
+
 //Ready to reef
-int ready = 0;
+int ready = -1;
+
+typedef enum {
+  BEFORE_DATA_COLLECTION,
+  START_DATA_COLLECTION,
+  MAINS_RELEASED,
+  FIRST_REEF_FIRED,
+  FIRST_EMATCH_OFF,
+  SECOND_REEF_FIRED,
+  SECOND_REEF_OFF,
+  END_DATA_COLLECTION
+} state_t;
+
+state_t state;
+
+long detectionTime;
+long fireTime1 = 6000;
+long fireTime2 = 12000;
+long durationOfFire = 500;
 
 void setup() {
 
@@ -32,12 +61,15 @@ void setup() {
   pinMode(ALTI_OUT_X, INPUT);
   pinMode(ALTI_OUT_Y, INPUT);
   pinMode(ALTI_OUT_Z, INPUT);
-  pinMode(REEF_FIRE, OUTPUT);
+  pinMode(REEF_FIRE_1, OUTPUT);
+  pinMode(REEF_FIRE_2, OUTPUT);
 
 }
 
 void loop() {
 
+  delayMicroseconds(50);
+  
   //Barometer Output
   double baroData = readBarometer();
 
@@ -60,8 +92,65 @@ void loop() {
   prevAltitude = baroData;
   prevTime = currentTime;
 
-  if (readyToFire(baroData, netAccel, speed) == 1) {
-    fireReefingCutters();
+  switch(state){
+    case BEFORE_DATA_COLLECTION:
+      foo();
+      break;
+    case 
+  }
+
+  if (state == state_t::BEFORE_DATA_COLLECTION && baroData <= dataLogStartAltitude && speed < -5 && zAccel < 4) {
+    state = state_t::START_DATA_COLLECTION;
+  }
+
+  if (ready >= 0 && ready <= 6) {
+    long currentLogTime = millis();
+    storeData(baroData, xAccel, yAccel, zAccel, speed, currentLogTime);
+  }
+
+  if (ready != 2 && readyToFire1(baroData, netAccel, speed) == 1) {
+
+    detectionTime = millis();
+
+  } else if (ready == 2) {
+
+    long currentTime = millis();
+    if (currentTime >= detectionTime + fireTime1 || baroData <= 50) {
+      digitalWrite(REEF_FIRE_1, HIGH);
+      ready = 3;
+    }
+
+  } else if (ready == 3) {
+
+    long currentTime = millis();
+    if (currentTime >= detectionTime + fireTime1 + durationOfFire) {
+      digitalWrite(REEF_FIRE_1, LOW);
+      ready = 4;
+    }
+
+  } else if (ready == 4) {
+
+    long currentTime = millis();
+    if (currentTime >= detectionTime + fireTime2) {
+      digitalWrite(REEF_FIRE_2, HIGH);
+      ready = 5;
+    }
+
+  } else if (ready == 5) {
+
+    long currentTime = millis();
+    if (currentTime >= detectionTime + fireTime2 + durationOfFire) {
+      digitalWrite(REEF_FIRE_2, LOW);
+      ready = 6;
+    }
+
+  } else if (ready == 6) {
+
+    long currentTime = millis();
+    if (currentTime >= detectionTime + fireTime2 + durationOfFire + 15000) {
+      ready = 7;
+    }
+
   }
 }
 
@@ -74,30 +163,35 @@ double * readAccelerometer() {
 }
 
 double calculateSpeed(double altitude, double prevAlt, double previousTime, double currentTime) {
+  //Returns the current descent speed of the rocket (positive- upward, negative- downward)
   return (altitude - prevAlt)/(currentTime - previousTime);
 }
 
 double calculateAccel(double xAccel, double yAccel, double zAccel) {
+  //Returns the net acceleration of the rocket
   return sqrt(pow(xAccel,2) + pow(yAccel,2) + pow(zAccel,2));
 }
 
-int readyToFire(double altitude, double accel, double speed) {
+int readyToFire1(double altitude, double accel, double speed) {
 
-  if (ready == 1) {
-    if (speed <= REEF_SPEED) {
-      return 1;
-    }
-  } else if (ready == 0) {
-    if (altitude <= CHECK_ALTITUDE && speed <= CHECK_SPEED) {
-        if (accel >= CHECK_ACCEL) {
-          ready = 1;
-          return 0;
-        }
+  if (altitude <= CHECK_ALTITUDE_1 && speed <= CHECK_SPEED_1) {
+    if (ready == 0) {
+      if (accel >= CHECK_ACCEL_1) {
+        ready = 1;
+        return 0;
+      }
+    } else if (ready == 1) {
+      if (speed <= REEF_SPEED_1) {
+        ready = 2;
+        return 1;
+      } else if (altitude < REEF_ALTITUDE_1) {
+        ready = 2;
+        return 1;
+      }
     }
   }
 }
 
-void fireReefingCutters() {
-
+int storeData(double altitude, double xAccel, double yAccel, double zAccel, double speed, long time) {
+  return -1;
 }
-
