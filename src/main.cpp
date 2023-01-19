@@ -53,6 +53,11 @@ long fireTime1 = 6000;
 long fireTime2 = 12000;
 long durationOfFire = 500;
 
+long ematch1FireTime;
+
+////////////////////////////////////////////////////////////////////
+
+
 void setup() {
 
   pinMode(BARO_SDA_IN, OUTPUT);
@@ -65,6 +70,10 @@ void setup() {
   pinMode(REEF_FIRE_2, OUTPUT);
 
 }
+
+
+////////////////////////////////////////////////////////////////////
+
 
 void loop() {
 
@@ -94,9 +103,33 @@ void loop() {
 
   switch(state){
     case BEFORE_DATA_COLLECTION:
-      foo();
+      if (baroData <= dataLogStartAltitude && speed < -5){
+        state = state_t::START_DATA_COLLECTION;  
+      }
+      break; 
+    case START_DATA_COLLECTION:
+      storeData(baroData, netAccel, xAccel, yAccel, zAccel, speed, currentLogTime);
+      if (mainsReleased == 1){
+        state = state_t::MAINS_RELEASED;
+      }
       break;
-    case 
+    case MAINS_RELEASED:
+      if (readyToFire1 == 1){
+        fireEmatch(1);
+        state = state_t::FIRST_REEF_FIRED;
+      }
+      break;
+    case FIRST_REEF_FIRED:
+      if (currentTime >= prevTime + 500 ){                //store current time, check if time is current time +500millis seconds
+        ematchOff(1);
+        state = state_t::FIRST_EMATCH_OFF;
+      }
+      break;
+    case FIRST_EMATCH_OFF:
+
+
+
+        // Outdated if statements. to be replaced and integrated into state machine 
   }
 
   if (state == state_t::BEFORE_DATA_COLLECTION && baroData <= dataLogStartAltitude && speed < -5 && zAccel < 4) {
@@ -154,6 +187,10 @@ void loop() {
   }
 }
 
+
+////////////////////////////////////////////////////////////////////
+
+
 double readBarometer() {
   return -1;
 }
@@ -194,4 +231,20 @@ int readyToFire1(double altitude, double accel, double speed) {
 
 int storeData(double altitude, double xAccel, double yAccel, double zAccel, double speed, long time) {
   return -1;
+}
+
+int mainsReleased(){
+  return -1
+}
+
+void fireEMatch(int ematchNum){
+  digitalWrite(ematchNum, HIGH);
+}
+
+void ematchOff(int ematchNum){
+  digitalWrite(ematchNum, LOW);
+}
+
+long getCurrentTime(){
+  return millis();
 }
