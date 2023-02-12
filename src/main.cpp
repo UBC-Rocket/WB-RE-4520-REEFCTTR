@@ -1,6 +1,9 @@
 #include <Arduino.h>
 #include <math.h>
 
+#include <MS5xxx.h>
+MS5xxx sensor(&Wire);
+
 //Add pin numbers based on PCB design on chip
 unsigned const int BARO_SDA;
 unsigned const int BARO_SCLK;
@@ -130,7 +133,14 @@ void loop() {
 
 // return altitude
 double readBarometer() {
-  return -1;
+  sensor.ReadProm();
+  sensor.Readout();
+  double Pressure = sensor.GetPres();
+  //Pressure [Pa] to alt [m]
+  //convert pressure to altitude. Formula from https://www.weather.gov/media/epz/wxcalc/pressureAltitude.pdf
+  double alt = (1-pow((Pressure/100)/1013.25, 0.190284)) * 145366.45 * 0.3048;
+
+  return alt;
 }
 
 // return data from accelerometer
