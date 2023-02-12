@@ -204,8 +204,6 @@ void loop() {
 double readBarometer() {
   sensor.ReadProm();
   sensor.Readout();
-  Serial.print("Temperature [0.01 C]: ");
-  double temp = sensor.GetTemp();
   double Pressure = sensor.GetPres();
   //Pressure [Pa] to alt [m]
   //convert pressure to altitude. Formula from https://www.weather.gov/media/epz/wxcalc/pressureAltitude.pdf
