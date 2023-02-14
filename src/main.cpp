@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <math.h>
 
+#include <queue>
+
 #include <MS5xxx.h>
 MS5xxx sensor(&Wire);
 
@@ -51,6 +53,8 @@ long detectionTime;
 long fireTime = 6000;
 long durationOfFire = 500;
 long dataEndTimeFromEMatchOff = 45000;
+double averageAlt = -1;
+queue<double> currentAlts;
 
 ////////////////////////////////////////////////////////////////////
 
@@ -100,7 +104,7 @@ void loop() {
       break; 
     case START_DATA_COLLECTION:
       storeData(baroData, netAccel, speed, currentTime);
-      if (readyToFire(baroData, netAccel, speed) == 1) {
+      if (readyToFire(baroData, speed) == 1) {
           detectionTime = millis();
       }
       break;
@@ -140,6 +144,24 @@ double readBarometer() {
   //convert pressure to altitude. Formula from https://www.weather.gov/media/epz/wxcalc/pressureAltitude.pdf
   double alt = (1-pow((Pressure/100)/1013.25, 0.190284)) * 145366.45 * 0.3048;
 
+  // if altitude reading is unreasonable, ignore it
+  if (alt < averageAlt-5000 || alt > averageAlt+5000) {
+    return averageAlt;
+  }
+
+  //update average
+  if (currentAlts.size() >= 5) {
+    double prevAlt = currentAlts.front();
+    currentAlts.pop();
+    currentAlts.push(alt);
+    averageAlt -= prevAlt/5;
+    averageAlt += alt/5;
+  }
+  else {
+    currentAlts.push(alt);
+    averageAlt += alt/5;
+  }
+
   return alt;
 }
 
@@ -152,7 +174,6 @@ double readAccelerometer() {
 
   double rawX;
   double rawY;
-
 
   return sqrt( pow(xAccel, 2) + pow(yAccel, 2) + pow(zAccel, 2) );
 }
@@ -167,9 +188,15 @@ double calculateAccel(double xAccel, double yAccel, double zAccel) {
   return sqrt(pow(xAccel,2) + pow(yAccel,2) + pow(zAccel,2));
 }
 
-int readyToFire(double altitude, double accel, double speed) {
+int readyToFire(double altitude, double speed) {
+  if (speed < 0) {
+    if (averageAlt > altitude) { //two if statements to confirm it is going downwards
+      if (altitude < REEF_ALTITUDE_1) {
+          return 1;
+      }
+    }
+  }
   return -1;
-  
 }
 
 void storeData(double netAccel, double altitude, double speed, long time) {
